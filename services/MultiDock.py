@@ -167,11 +167,16 @@ DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL = (
     "объект выбора и причины, которые наиболее актуальны для "
     "вопрос: '{query_str}'\n"
 )
-
+llm = OpenAI(
+    api_key=api_key,
+    model="gpt-4-turbo-preview",
+    temperature=0)
 
 query_engine = RouterQueryEngine.from_defaults(
-    selector=PydanticMultiSelector.from_defaults(
-        prompt_template_str=DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL, verbose=True),
+    selector=PydanticMultiSelector.from_defaults(llm=llm,
+                                                 prompt_template_str=DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL,
+
+                                                 ),
     query_engine_tools=tools,)
 
 
