@@ -72,9 +72,10 @@ indexes = []
 
 
 for file in os.listdir("docs"):
+    filename = file.lstrip(".")
     try:
         storage_context = StorageContext.from_defaults(
-            persist_dir="./storage/"+file.rsplit(".")
+            persist_dir="./storage/"+filename
         )
         index = load_index_from_storage(storage_context)
         indexes.append({"index": index, "name": file})
@@ -86,17 +87,18 @@ for file in os.listdir("docs"):
             directory, show_progress=True)
         indexes.append({"index": index, "name": file})
         index.storage_context.persist(
-            persist_dir="./storage/"+file.rsplit("."))
+            persist_dir="./storage/"+filename)
 
 tools = []
 print(indexes)
 for index in indexes:
-
+    current_index: VectorStoreIndex = index.get("index")
     match index.get("name"):
         case "Оплата услуг _ ГК Smart.pdf":
             tools.append(QueryEngineTool.from_defaults(
                 name="Оплата услуг _ ГК Smart.pdf",
-                query_engine=index.get("index").as_query_engine(),
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           ),
                 description=("Отвечай только на русском языке."
                              "обращайся к этому файлу, если у сотрудника возникли вопросы связанные с оплатой услуг, в каких числах и как выплачивается заработная плата, что делать в случае болезни, как запланировать отпускные дни. Обязательно укажи в какие даты производятся выплаты"
                              "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
@@ -104,7 +106,8 @@ for index in indexes:
         case "Праздничные дни _ ГК Smart.pdf":
             tools.append(QueryEngineTool.from_defaults(
                 name="Праздничные дни _ ГК Smart.pdf",
-                query_engine=index.get("index").as_query_engine(),
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           ),
                 description=("Отвечай только на русском языке."
                              "обращайся к этому файлу, если у сотрудника возникли вопросы связанные с праздничными днями, какая миссия компании, в какие дни компания работает в стандартном режиме,об оплате в праздничные дни."
                              "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
@@ -113,7 +116,8 @@ for index in indexes:
         case "Регламент взаимодействия ГК Smart.pdf":
             tools.append(QueryEngineTool.from_defaults(
                 name="Регламент взаимодействия ГК Smart.pdf",
-                query_engine=index.get("index").as_query_engine(),
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           ),
                 description=("Отвечай только на русском языке."
                              "Если спрашивают про учет рабочего времени или ведение задач обязательно упоминай про то как начать и завершшить рабочий день"
                              " обращайся к этому файлу, если у сотрудника возникли вопросы связанные с правоотношениями, регламентом учета рабочего времени, выход во вне рабочее время, работа с задачами по принципу ответственности и доверия, основные правила при постановке задач, прием, ведение и постановка задач, как включить учет рабочего времени для краткосрочных задач, примеры краткосрочных и долгосрочных задач, коммуникация с коллегами, рабочие чаты, какие есть чаты, еженедельные планерки."
@@ -123,7 +127,8 @@ for index in indexes:
         case "Регламент_о_сохранности_и_конфиденциальности_интеллектуальной_собственности.pdf":
             tools.append(QueryEngineTool.from_defaults(
                 name="Регламент_о_сохранности_и_конфиденциальности_интеллектуальной_собственности.pdf",
-                query_engine=index.get("index").as_query_engine(),
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           ),
                 description=("Отвечай только на русском языке."
                              " обращайся к этому файлу, если у сотрудника возникли вопросы связанные с интеллектуальной собственностью, вопросы безопасности."
                              "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
@@ -132,7 +137,8 @@ for index in indexes:
         case "Регламент_расторжения_договора_услуг.pdf":
             tools.append(QueryEngineTool.from_defaults(
                 name="Регламент_расторжения_договора_услуг.pdf",
-                query_engine=index.get("index").as_query_engine(),
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           ),
                 description=("Отвечай только на русском языке."
                              "Регламент_расторжения_договора_услуг.pdf - обращайся к этому файлу, если у сотрудника возникли вопросы связанные с прекращением сотрудничества, когда последний день, инструкция по финальному документообороту, если сотрудничество было по самозанятости, причины расторжения договора по инициативе Заказчика."
                              "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
@@ -141,24 +147,13 @@ for index in indexes:
         case "Как_получить_Чек_и_заполнить_раздел_Перечень_услуг.pdf":
             tools.append(QueryEngineTool.from_defaults(
                 name="Как_получить_Чек_и_заполнить_раздел_Перечень_услуг.pdf",
-                query_engine=index.get("index").as_query_engine(),
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           ),
                 description=("Отвечай только на русском языке."
                              " Как_получить_Чек_и_заполнить_раздел_Перечень_услуг.pdf -  обращайся к этому файлу, если у сотрудника возникли вопросы связанные с сбором закрывающих документов, что делать после оплаты услуги, как получить чек самозанятого, как отправить документы на проверку по оплате, как создать задачу в Битрикс24 для проверки чеков оплаты услуг, что писать в предоставлении услуг, примеры заполнения раздела перечень услуг по отделам, проверка закрывающих документов и подпись, процесс подписания документов по ЭДО."
                              "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
             ))
 
-
-# pydantic selectors feed in pydantic objects to a function calling API
-# single selector (pydantic)
-selector = PydanticSingleSelector.from_defaults()
-# multi selector (pydantic)
-selector = PydanticMultiSelector.from_defaults()
-
-# LLM selectors use text completion endpoints
-# single selector (LLM)
-selector = LLMSingleSelector.from_defaults()
-# multi selector (LLM)
-selector = LLMMultiSelector.from_defaults()
 
 DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL = (
     "Некоторые варианты приведены ниже. Они пронумерованы "
