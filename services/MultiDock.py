@@ -9,7 +9,9 @@ from dotenv import dotenv_values
 from llama_index.core import (
     Settings,
     VectorStoreIndex,
-    SimpleDirectoryReader
+    SimpleDirectoryReader,
+    StorageContext,
+    load_index_from_storage
 )
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
@@ -67,13 +69,24 @@ Settings.llm = OpenAI(
 #  Как_получить_Чек_и_заполнить_раздел_Перечень_услуг.docx -  обращайся к этому файлу, если у сотрудника возникли вопросы связанные с сбором закрывающих документов, что делать после оплаты услуги, как получить чек самозанятого, как отправить документы на проверку по оплате, как создать задачу в Битрикс24 для проверки чеков оплаты услуг, что писать в предоставлении услуг, примеры заполнения раздела перечень услуг по отделам, проверка закрывающих документов и подпись, процесс подписания документов по ЭДО.
 
 indexes = []
-for file in os.listdir("docs"):
-    directory = SimpleDirectoryReader(
-        input_files=["docs/"+file]
-    ).load_data()
 
-    indexes.append(
-        {"index": VectorStoreIndex.from_documents(directory, show_progress=True), "name": file})
+
+for file in os.listdir("docs"):
+    try:
+        storage_context = StorageContext.from_defaults(
+            persist_dir="./storage/"+file.rsplit(".")
+        )
+        index = load_index_from_storage(storage_context)
+        indexes.append({"index": index, "name": file})
+    except:
+        directory = SimpleDirectoryReader(
+            input_files=["docs/"+file]
+        ).load_data()
+        index = VectorStoreIndex.from_documents(
+            directory, show_progress=True)
+        indexes.append({"index": index, "name": file})
+        index.storage_context.persist(
+            persist_dir="./storage/"+file.rsplit("."))
 
 tools = []
 print(indexes)
