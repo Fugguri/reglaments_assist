@@ -1,2 +1,1 @@
-# lisaladanova
 # reglaments_assist

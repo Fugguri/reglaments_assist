@@ -1,0 +1,6 @@
+messages:
+  start: "Начти с простого привет!"
+
+keyboard:
+  add_profile: "Меню"
+  edit_profile: "..."
