@@ -1,3 +1,4 @@
+from llama_index.core.llms import ChatMessage
 from llama_index.core.selectors import (
     PydanticMultiSelector,
     PydanticSingleSelector,
@@ -13,6 +14,7 @@ from llama_index.core import (
     StorageContext,
     load_index_from_storage
 )
+from llama_index.core.chat_engine import SimpleChatEngine, CondenseQuestionChatEngine, ContextChatEngine
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.core.query_engine import BaseQueryEngine, RouterQueryEngine
@@ -30,13 +32,15 @@ http_client = httpx.Client(proxies=proxy_url,
                            transport=httpx.HTTPTransport(
                                local_address="0.0.0.0"))
 
-Settings.llm = OpenAI(
+
+sys_llm = OpenAI(
     api_key=api_key,
     model="gpt-3.5-turbo-0125",
     temperature=0,
-    system_prompt="""Ты ассистент по регламентам в Группе компаний Смарт
+    system_prompt="""Ты ассистент по регламентам в Группе компаний Смарт.
+если вопрос не понятен - уточни. Говори только на темы связанные с Группой компаний и о загруженных документах документы
 Твоя задача - Дать исчерпывающий ответ сотруднику на вопрос основываясь на данных из документа и дать полную и исчерпывающую инструкцию а не просто сослаться на документ, который относится к организации рабочих процессов или другую информацию, описанную в регламентах и правила компании Smart.
- Вот некоторые правила, которые ты должен соблюдать.
+Вот некоторые правила, которые ты должен соблюдать.
 Отвечай только на русском языке. 
  Ты должен Проанализировать запрос сотрудника, уточнить из какого он отдела. Если запрос тебе понятен, то обратиться к поиску информации в регламентах и  полностью ответить на запрос сотрудника на основании документа. Если запрос не понятен, то попросить пользователя написать более развернутый ответ, уточнить детали.
  1.Тебе запрещено общаться на темы, не касающиеся документации и регламента. Если сотрудник задает вопросы не связанные с темой регламентов, то напоминать сотруднику, что ты можешь помочь только на определенные темы, которые в тебя загруженные. Не нужно придумывать иную информацию.
@@ -68,6 +72,7 @@ Settings.llm = OpenAI(
 #  Регламент_расторжения_договора_услуг.docx - обращайся к этому файлу, если у сотрудника возникли вопросы связанные с прекращением сотрудничества, когда последний день, инструкция по финальному документообороту, если сотрудничество было по самозанятости, причины расторжения договора по инициативе Заказчика.
 #  Как_получить_Чек_и_заполнить_раздел_Перечень_услуг.docx -  обращайся к этому файлу, если у сотрудника возникли вопросы связанные с сбором закрывающих документов, что делать после оплаты услуги, как получить чек самозанятого, как отправить документы на проверку по оплате, как создать задачу в Битрикс24 для проверки чеков оплаты услуг, что писать в предоставлении услуг, примеры заполнения раздела перечень услуг по отделам, проверка закрывающих документов и подпись, процесс подписания документов по ЭДО.
 
+Settings.llm = sys_llm
 indexes = []
 
 
@@ -90,7 +95,6 @@ for file in os.listdir("docs"):
             persist_dir="./storage/"+filename)
 
 tools = []
-print(indexes)
 for index in indexes:
     current_index: VectorStoreIndex = index.get("index")
     match index.get("name"):
@@ -153,8 +157,24 @@ for index in indexes:
                              " Как_получить_Чек_и_заполнить_раздел_Перечень_услуг.pdf -  обращайся к этому файлу, если у сотрудника возникли вопросы связанные с сбором закрывающих документов, что делать после оплаты услуги, как получить чек самозанятого, как отправить документы на проверку по оплате, как создать задачу в Битрикс24 для проверки чеков оплаты услуг, что писать в предоставлении услуг, примеры заполнения раздела перечень услуг по отделам, проверка закрывающих документов и подпись, процесс подписания документов по ЭДО."
                              "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
             ))
-
-
+        case "2_0_Smart_ИП_Подрядчик_оформление_и_получение_оплаты.pdf":
+            tools.append(QueryEngineTool.from_defaults(
+                name="2_0_Smart_ИП_Подрядчик_оформление_и_получение_оплаты.pdf",
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           similarity_top_k=3),
+                description=("Отвечай только на русском языке."
+                             " 2_0_Smart_ИП_Подрядчик_оформление_и_получение_оплаты.pdf -  обращайся к этому файлу, если у сотрудника возникли вопросы связанные "
+                             "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
+            ))
+        case "Закрывающие_документы_для_СЗ_и_ИП.pdf":
+            tools.append(QueryEngineTool.from_defaults(
+                name="Закрывающие_документы_для_СЗ_и_ИП.pdf",
+                query_engine=current_index.as_query_engine(llm=Settings.llm,
+                                                           similarity_top_k=3),
+                description=("Отвечай только на русском языке."
+                             "Закрывающие_документы_для_СЗ_и_ИП.pdf -  обращайся к этому файлу, если нужно получить информацию по сбору закрывающих документов для Самозанятого,что нужно делаь после получения выплат или Сбор закрывающих документов для ИП (Индивидуальных предпринимателей)."
+                             "Используйте подробный текстовый вопрос в качестве входных данных для инструмента")
+            ))
 DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL = (
     "Некоторые варианты приведены ниже. Они пронумерованы "
     "список (от 1 до {num_choices}), "
@@ -170,26 +190,36 @@ DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL = (
 llm = OpenAI(
     api_key=api_key,
     model="gpt-4-turbo-preview",
-    temperature=0)
+    temperature=0,
+    system_prompt="Овечай на русском")
 
 query_engine = RouterQueryEngine.from_defaults(
-    selector=PydanticMultiSelector.from_defaults(llm=llm,
-                                                 prompt_template_str=DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL,
-                                                 verbose=True
-                                                 ),
+
+    selector=PydanticSingleSelector.from_defaults(llm=llm,
+                                                  #   prompt_template_str=DEFAULT_SINGLE_PYD_SELECT_PROMPT_TMPL,
+                                                  verbose=True
+                                                  ),
     query_engine_tools=tools,)
 
 
-async def create_answer(user_id, message):
-    # chat = chat_history.get(user_id, None)
+chat_engine = CondenseQuestionChatEngine.from_defaults(
+    query_engine, llm=sys_llm)
+chat_history = {}
 
-    res = await query_engine.aquery(message)
-    return res
+
+def create_chat_message(content, role: str = "user"):
+    return ChatMessage(role=role, content=content)
+
+
+async def create_answer(user_id, message):
+    chat = chat_history.get(user_id, None)
+
+    # return res
 
     if not chat:
         chat_history.setdefault(user_id, [])
-    result = pdf_qa.invoke(
-        {"question": message, "chat_history": chat_history[user_id]})
-    print(f"{white}Answer: " + result["answer"])
-    chat_history[user_id].append((message, result["answer"]))
-    return result["answer"]
+    chat = chat_history[user_id].append((create_chat_message(message)))
+    res = chat_engine.chat(message, chat_history=chat)
+    chat_history[user_id].append((create_chat_message(res, role="assistant")))
+
+    return res

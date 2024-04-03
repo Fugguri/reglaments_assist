@@ -10,6 +10,7 @@ from config.config import Config
 from keyboards.keyboards import Keyboards
 from .admin import admin
 from utils import speech_to_text
+from algo import Algo
 
 
 async def start(message: types.Message, state: FSMContext):
@@ -40,7 +41,10 @@ async def create_response(message: types.Message, state: FSMContext):
     message.text = text
     try:
         answer = await create_answer(message.from_user.id, message.text)
-    except:
+        # answer = await Algo.create_answer(message.text, message.from_user.id,)
+
+    except Exception as ex:
+        print(ex)
         await message.answer("К сожалению,я не смогу обработать этот запрос")
         return
     # answer = await gpt.create_answer(message)
