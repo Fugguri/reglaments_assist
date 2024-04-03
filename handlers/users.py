@@ -10,7 +10,6 @@ from config.config import Config
 from keyboards.keyboards import Keyboards
 from .admin import admin
 from utils import speech_to_text
-from algo import Algo
 
 
 async def start(message: types.Message, state: FSMContext):
